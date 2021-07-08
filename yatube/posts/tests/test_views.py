@@ -30,6 +30,7 @@ class PostPagesTests(TestCase):
             content_type='image/gif'
         )
         cls.user = User.objects.create_user(username='TestUser')
+        cls.user_2 = User.objects.create_user(username='TestUser2')
         cls.group = Group.objects.create(title='Тестовое название',
                                          slug='test-slug',
                                          description='Тестовое описание')
@@ -52,6 +53,8 @@ class PostPagesTests(TestCase):
         self.guest_client = Client()
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user)
+        self.authorized_client_2 = Client()
+        self.authorized_client_2.force_login(self.user_2)
 
     def test_pages_use_template(self):
         for template, reverse_name in self.templates_pages_names.items():
@@ -144,7 +147,7 @@ class PostPagesTests(TestCase):
         self.assertEqual(response_page_not_found.status_code,
                          HTTPStatus.NOT_FOUND)
 
-    def not_authorized_user_cant_comment(self):
+    def test_not_authorized_user_cant_comment(self):
         response = self.guest_client.post(reverse(
             'add_comment', kwargs={self.author.username,
                                    self.post.id})
@@ -154,7 +157,7 @@ class PostPagesTests(TestCase):
                             self.post.id})
         )
 
-    def authorized_user_can_comment(self):
+    def test_authorized_user_can_comment(self):
         self.form_data = {'text': 'test comment'}
         self.authorized_client.post(reverse(
             'add_comment', kwargs={self.author.username, self.post.id}),
@@ -195,6 +198,42 @@ class PostPagesTests(TestCase):
                 else:
                     image = response.context['post'].image
                 self.assertEqual(image, self.post.image)
+
+    def test_follow(self):
+        self.authorized_client_2.get(reverse(
+            'profile_follow', kwargs={'username': self.user.username})
+        )
+        follow = Follow.objects.first()
+        self.assertEqual(Follow.objects.count(), 1)
+        self.assertEqual(follow.author, self.user)
+        self.assertEqual(follow.user, self.user_2)
+
+    def test_unfollow(self):
+        self.authorized_client_2.get(reverse(
+            'profile_follow', kwargs={'username': self.user.username})
+        )
+        self.authorized_client_2.get(reverse(
+            'profile_unfollow', kwargs={'username': self.user.username})
+        )
+        self.assertFalse(Follow.objects.exists())
+
+    def test_follow_index(self):
+        Post.objects.create(author=self.user, text='TestText',
+                            group=self.group)
+        self.authorized_client_2.get(reverse(
+            'profile_follow', kwargs={'username': self.user.username})
+        )
+        response = self.authorized_client_2.get(reverse('follow_index'))
+        post = response.context['post']
+        self.assertEqual(post.text, 'TestText')
+        self.assertEqual(post.author, self.user)
+        self.assertEqual(post.group.id, self.group.id)
+
+    def test_unfollow_index(self):
+        Post.objects.create(author=self.user,
+                            text='TestText', group=self.group)
+        response = self.self.authorized_client_2.get(reverse('follow_index'))
+        self.assertEqual(response.context['paginator'].count, 0)
 
 
 class PaginatorViewsTest(TestCase):
