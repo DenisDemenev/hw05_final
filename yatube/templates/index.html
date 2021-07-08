@@ -3,12 +3,16 @@
 {% block title %}Последние обновления на сайте{% endblock %}
 {% block header %}Последние обновления на сайте{% endblock %}
 {% block content %}
+<main role="main" class="container">
+    {% include "includes/menu.html" with index=True %}
+
 <div class="container">
 
     {% for post in page %}
     {% include "includes/post_item.html" with post=post %}
     {% endfor %}
 </div>
-    {% include "includes/paginator.html" %}
+{% include "includes/paginator.html" with items=page paginator=paginator %}
+</main>
 
 {% endblock %} 
