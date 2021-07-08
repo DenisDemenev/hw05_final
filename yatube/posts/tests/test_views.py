@@ -147,20 +147,25 @@ class PostPagesTests(TestCase):
         self.assertEqual(response_page_not_found.status_code,
                          HTTPStatus.NOT_FOUND)
 
-    def test_not_authorized_user_cant_comment(self):
-        response = self.guest_client.post(reverse(
-            'add_comment', kwargs={self.author.username,
-                                   self.post.id})
-        )
-        self.assertRedirects(response, reverse(
-            'post', kwargs={self.author.username,
-                            self.post.id})
+    def test_comment_not_authorized(self):
+        self.form_data = {
+            'text': 'Комментарий неавторизированного пользователя'
+        }
+        self.client.post(reverse(
+            'add_comment',
+            kwargs={'username': self.user.username,
+                    'post_id': self.post.id}),
+            data=self.form_data, follow=True)
+        self.assertFalse(Comment.objects.filter(
+            text='Комментарий неавторизированного пользователя',
+            post_id=self.post.id).exists()
         )
 
     def test_authorized_user_can_comment(self):
         self.form_data = {'text': 'test comment'}
         self.authorized_client.post(reverse(
-            'add_comment', kwargs={self.author.username, self.post.id}),
+            'add_comment', kwargs={'username': self.user.username,
+                                   'post_id': self.post.id}),
             data=self.form_data, follow=True
         )
         self.assertTrue(
@@ -232,7 +237,7 @@ class PostPagesTests(TestCase):
     def test_unfollow_index(self):
         Post.objects.create(author=self.user,
                             text='TestText', group=self.group)
-        response = self.self.authorized_client_2.get(reverse('follow_index'))
+        response = self.authorized_client_2.get(reverse('follow_index'))
         self.assertEqual(response.context['paginator'].count, 0)
 
 
