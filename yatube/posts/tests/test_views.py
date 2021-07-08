@@ -149,7 +149,7 @@ class PostPagesTests(TestCase):
 
     def test_comment_not_authorized(self):
         self.form_data = {
-            'text': 'Комментарий неавторизированного пользователя'
+            'text': 'Test comment'
         }
         self.client.post(reverse(
             'add_comment',
@@ -157,7 +157,7 @@ class PostPagesTests(TestCase):
                     'post_id': self.post.id}),
             data=self.form_data, follow=True)
         self.assertFalse(Comment.objects.filter(
-            text='Комментарий неавторизированного пользователя',
+            text='Test comment',
             post_id=self.post.id).exists()
         )
 
