@@ -100,7 +100,7 @@ def add_comment(request, username, post_id):
     if form.is_valid():
         comment = form.save(commit=False)
         comment.author = request.user
-        comment.post = Post.objects.get(id=post_id)
+        comment.post = get_object_or_404(Post, id=post_id)
         comment.save()
         return redirect('post', username, post_id)
     return redirect('post', username, post_id)
@@ -108,11 +108,7 @@ def add_comment(request, username, post_id):
 
 @login_required
 def follow_index(request):
-    favorite_list = Follow.objects.select_related('author', 'user').filter(
-        user=request.user
-    )
-    author_list = [favorite.author for favorite in favorite_list]
-    post_list = Post.objects.filter(author__in=author_list)
+    post_list = Post.objects.filter(author__following__user=request.user)
     paginator = Paginator(post_list, settings.PER_PAGE)
     page_number = request.GET.get('page')
     page = paginator.get_page(page_number)
@@ -129,10 +125,8 @@ def follow_index(request):
 @login_required
 def profile_follow(request, username):
     author = get_object_or_404(User, username=username)
-    obj = Follow.objects.filter(user=request.user, author=author).first()
-    if not obj and author.id != request.user.id:
-        new = Follow(user=request.user, author=author)
-        new.save()
+    if author != request.user:
+        Follow.objects.get_or_create(author=author, user=request.user)
     return redirect('profile', username=username)
 
 
